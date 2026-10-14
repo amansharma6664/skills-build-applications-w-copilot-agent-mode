@@ -28,22 +28,22 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-Record your plan here before editing code.
+Build in this order: data tier, then logic tier, then presentation tier. The schemas and seed data are the contract that the APIs and UI must honor.
 
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: wire `App.tsx` and the four capability pages (activities, teams, leaderboard, workouts) to the shared API client using relative `/api` paths only; each page shows a loading state, the data list, a meaningful empty state, and an error message with `role="alert"` when the API fails.
+- Logic tier decision: implement the Express routes with deliberate validation; invalid or malformed input returns `400/404/4xx`, never `501` or a `500` from a cast error; keep ranking and suggestion logic in small service functions.
+- Data tier decision: add required-field validation to the `User`, `Team`, `Activity`, and `Workout` Mongoose schemas and keep representative seed data in `seed.ts`.
+- Activity tracking approach: `POST /api/activities` validates that `userId` and `teamId` are well-formed IDs of an existing user and team, then stores `user`, `team`, `type`, and `minutes` plus computed `points` and `occurredAt`.
+- Team management approach: `POST /api/teams` stores `name` and `mascot` and rejects a missing name with `400`; `GET /api/teams` returns teams with members.
+- Leaderboard approach: sum activity points per team, sort highest first, return `teamName`, `totalPoints`, and a 1-based `rank`.
+- Workout suggestions approach: look up the user by email (`404` if not found), check their goal and recent activity pattern, and return suggestions whose first `focus` matches, each with a `reason`.
 
 ## Test plan
 
 Record the commands you run and what each failure means.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- Data-tier command: `npm run test:data --prefix octofit-tracker/backend` — baseline result: `1 passed, 4 failed`; this means the required-field validation is missing on `User`, `Team`, `Activity`, and `Workout` schemas.
+- API command: `npm run test:api --prefix octofit-tracker/backend` — baseline result: `4 failed`; this means invalid submissions return `501` instead of `4xx`, the leaderboard is empty, workout suggestions pick the wrong focus, and unknown users are not handled correctly.
+- Frontend command: `npm test --prefix octofit-tracker/frontend` — baseline result: `15 failed`; this means every route still shows the placeholder "Implementation pending" state instead of data, empty-state handling, or an accessible alert on API failure.
+- Backend build command: `npm run build --prefix octofit-tracker/backend` — goal: compile the backend with no TypeScript errors.
+- Frontend build command: `npm run build --prefix octofit-tracker/frontend` — goal: compile the frontend with no TypeScript or Vite build errors.
